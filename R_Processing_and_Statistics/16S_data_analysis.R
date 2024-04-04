@@ -1,6 +1,6 @@
 #title: "Kombucha-16S"
 #author: "Jonathan Sogin"
-#date: "2023"
+#date: "2024"
 
 
 #Importing libraries
@@ -201,7 +201,7 @@ write.csv(sum_table, "Bacdata_filtering_counts.csv", quote=F)
 #######################################################
 samples_plotting <- bacdata_decontam
 
-#aglommerating data to Genus level for plotting
+#agglomerating data to Genus level for plotting
 samples_plottingGlomGenus <- glom_tax(samples_plotting, "Genus")
 samples_plottingGlomGenusNorm <- transform_sample_counts(samples_plottingGlomGenus, function(x) x / sum(x))
 
@@ -233,11 +233,11 @@ original_plottable = psmelt(plot_object)
   original_plottable=original_plottable[order(original_plottable$Blinded_Product),]
   original_plottable$Genus=factor(original_plottable$Genus, levels=c(setdiff(original_plottable$Genus, "other"), "other"))
 
-original_rel_abundance_plot <- ggbarplot(original_plottable, x="Sample", y="Abundance", fill="Genus", xlab=F, ylab="original", palette = "simpsons", width=1)+
+original_rel_abundance_plot <- ggbarplot(original_plottable, x="Sample", y="Abundance", fill="Genus", xlab=F, ylab="<strong>original</strong><br>relative abundance", palette = "simpsons", width=1)+
   facet_grid(~Blinded_Brand, switch="x", scales="free_x", space="free_x", labeller=as_labeller(function(x){gsub("_", " ", x)}))+
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())+
   font("legend.title")+
-  font("ylab", face="plain", size=15)+
+  theme(axis.title.y=element_markdown(face="plain", size=15))+
   theme(text=element_text(family="serif"))+
   theme(legend.text=element_markdown())
 #######################################################
@@ -277,7 +277,7 @@ rownames(pal_tab) <- pal_tab[,"Genus"]
 
 samples_plotting <- bacdata_decontam_filt
 
-#aglommerating data to Family level for plotting
+#agglomerating data to Genus level for plotting
 samples_plottingGlomGenus <- glom_tax(samples_plotting, "Genus")
 samples_plottingGlomGenusNorm <- transform_sample_counts(samples_plottingGlomGenus, function(x) x / sum(x))
 
@@ -313,16 +313,16 @@ addedremoved_plottable = psmelt(plot_object)
   addedremoved_plottable=addedremoved_plottable[order(addedremoved_plottable$Blinded_Product),]
   addedremoved_plottable$Genus=factor(addedremoved_plottable$Genus, levels=c(setdiff(addedremoved_plottable$Genus, "other"), "other"))
 
-addedremoved_rel_abundance_plot <- ggbarplot(addedremoved_plottable, x="Sample", y="Abundance", fill="Genus", xlab=F, ylab="cultures removed", palette=as.vector(pal_tab[levels(addedremoved_plottable$Genus),"Hex"]), width=1)+
+addedremoved_rel_abundance_plot <- ggbarplot(addedremoved_plottable, x="Sample", y="Abundance", fill="Genus", xlab=F, ylab="<strong>cultures removed</strong><br>relative abundance", palette=as.vector(pal_tab[levels(addedremoved_plottable$Genus),"Hex"]), width=1)+
   facet_grid(~Blinded_Brand, switch="x", scales="free_x", space="free_x", labeller=as_labeller(function(x){gsub("_", " ", x)}))+
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())+
   font("legend.title")+
-  font("ylab", face="plain", size=15)+
+  theme(axis.title.y=element_markdown(face="plain", size=15))+
   theme(text=element_text(family="serif"))+
   theme(legend.text=element_markdown())
 
 combined_rel_abundance_plot <- ggarrange(original_rel_abundance_plot, addedremoved_rel_abundance_plot, ncol=1, common.legend = T, legend = "bottom", align="v")
-ggsave(plot=combined_rel_abundance_plot, filename="Bacterial_Relative_Abundance.tiff", width=8, height=6, units="in", dpi="print", bg="white")
+ggsave(plot=combined_rel_abundance_plot, filename="Bacterial_Relative_Abundance.tiff", width=8.5, height=6, units="in", dpi="print", bg="white")
 #######################################################
 
 #Data analysis
@@ -448,7 +448,7 @@ ggsave(plot=ordination_plot, filename="Bacterial_Bray_Ordination.tiff", width=8,
 
 #Beta diversity PERMANOVA
 #######################################################
-#Conducting PERMANOVA analysis to determine effect of Product and Time_point variables on overall community structure
+#Conducting PERMANOVA analysis to determine effect of Brand and Product variables on overall community structure
 
 #Agglomerating data to Species level to reduce the dimentionality of the data
 phyloseq4permanova <- analysis_GlomSpecies_norm
@@ -474,14 +474,6 @@ dbrda.microbiological <- dbrda(dist ~ X16S_Sequencing_Run + Blinded_Brand + GYC.
 dbrda.microbiological.aov <- anova(dbrda.microbiological, by = 'margin')
 dbrda.microbiological.aov
 
-#checking condition for equal variance around centroid
-permdisp2_Sequencing_Run <- betadisper(dist, meta$X16S_Sequencing_Run)
-permdisp2_Sequencing_Run.aov <- anova(permdisp2_Sequencing_Run)
-permdisp2_Sequencing_Run$call; permdisp2_Sequencing_Run.aov
-
-permdisp2_Brand <- betadisper(dist, meta$Blinded_Brand)
-permdisp2_Brand.aov <- anova(permdisp2_Brand)
-permdisp2_Brand$call; permdisp2_Brand.aov
 
 coef_Lactic <- coefficients(permanova.physiochemical)["Lactic..g.L.",]
 top_coef_Lactic <- as.data.frame(coef_Lactic[rev(order(abs(coef_Lactic)))[1:10]])
@@ -527,68 +519,6 @@ lactic_cor_plot <- ggscatter(data=subset(phys_chem_plots, Order=="Lactobacillale
 
 #exported as tiff Bacterial_Product_PERMANOVA_Coefficients.tiff
 ggsave(plot=lactic_cor_plot, filename="Bacterial_Lactic_correlation.tiff", width=6, height=4, units="in", dpi="print")
-#######################################################
-
-
-#Using MaAsLin2 to look at associations between chemical and microbiological data and the observed community
-#######################################################
-#setting a filtering cutoff of mean abundance greater than 0.0005 and prevalence greater than 0.25
-phyloseq4maaslin_tmp <- analysis_GlomSpecies
-  phyloseq4maaslin_tmp_norm <- analysis_GlomSpecies_norm
-  otus_to_keep <- rownames(tax_table(filter_taxa(phyloseq4maaslin_tmp_norm, function(x) {mean(x) > 0.0005 & sum(x>0) > length(sample_sums(phyloseq4maaslin_tmp_norm))*0.25}, T)))
-phyloseq4maaslin <- prune_taxa(otus_to_keep, phyloseq4maaslin_tmp)
-sample_sums(phyloseq4maaslin)/sample_sums(phyloseq4maaslin_tmp)
-
-otu <- t(otu_table(phyloseq4maaslin))
-meta <- data.frame(sample_data(phyloseq4maaslin)[,c("X16S_Sequencing_Run", "Blinded_Brand", "pH", "Ethanol....", "Lactic..g.L.", "Acetic..g.L.", "Glucose..g.L.", "Nutrition.Sugar..g.L.", "Fructose..g.L.", "calculated_sugar", "rel_sugar_difference", "GYC.N..log10CFU.mL.", "APDA..log10CFU.mL.", "MRS.N..log10CFU.mL.")])
-
-model_chem <- Maaslin2(input_data=otu, input_metadata=meta, output="Bacteria_MaaslinChemResults", fixed_effects=c("pH", "Ethanol....", "Lactic..g.L.", "Acetic..g.L.", "calculated_sugar", "rel_sugar_difference"), random_effects=c("X16S_Sequencing_Run", "Blinded_Brand"))
-
-Maaslin_chem_results <- read.delim(file="./Bacteria_MaaslinChemResults/all_results.tsv")
-Maaslin_chem_results$metadata <- factor(Maaslin_chem_results$metadata, levels=rev(c("Ethanol....", "pH", "Lactic..g.L.", "Acetic..g.L.", "calculated_sugar", "rel_sugar_difference")))
-
-#'significance' is derived from the Maaslin q value, and is -log10(q)*sign(coef)
-Maaslin_chem_results$sig <- (-log10(Maaslin_chem_results$qval)*sign(Maaslin_chem_results$coef))
-  Maaslin_chem_results$feature <- gsub("X(.{32})", "\\1", Maaslin_chem_results$feature)
-  Maaslin_chem_results$species <- tax_table(phyloseq4maaslin)[Maaslin_chem_results$feature, "Species"]
-    Maaslin_chem_results$species <- paste0("<i>", Maaslin_chem_results$species, "</i>")
-    Maaslin_chem_results$species <- gsub("^<i>(U[A-Z]) ", "\\1 <i>", Maaslin_chem_results$species)
-    Maaslin_chem_results$species <- gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", Maaslin_chem_results$species)
-
-maaslin_chem_cor <- ggscatter(data=Maaslin_chem_results[abs(Maaslin_chem_results$sig)>0.6,], y="metadata", x="species", legend="right", xlab=F, ylab=F)+
-  rotate_x_text(angle=20)+
-  geom_point(aes(color=sig), size=10)+
-  scale_color_steps2(limit = c(-2.5,2.5), low = "blue", high =  "red", mid = "white", midpoint = 0, name="Significance")+
-  theme(axis.text.x=element_markdown())+
-  theme(text=element_text(family="serif"))+
-  scale_y_discrete(labels=rev(c("pH", "lactic acid", "acetic acid", "total sugar", "sugar vs label")))
-
-
-model_micro <- Maaslin2(input_data=otu, input_metadata=meta, output="Bacteria_MaaslinMicroResults", fixed_effects=c("GYC.N..log10CFU.mL.", "APDA..log10CFU.mL.", "MRS.N..log10CFU.mL."), random_effects=c("X16S_Sequencing_Run", "Blinded_Brand"))
-
-Maaslin_micro_results <- read.delim(file="./Bacteria_MaaslinMicroResults/all_results.tsv")
-Maaslin_micro_results$metadata <- factor(Maaslin_micro_results$metadata, levels=rev(c("GYC.N..log10CFU.mL.", "MRS.N..log10CFU.mL.", "APDA..log10CFU.mL.")))
-
-Maaslin_micro_results$sig <- (-log10(Maaslin_micro_results$qval)*sign(Maaslin_micro_results$coef))
-  Maaslin_micro_results$feature <- gsub("X(.{32})", "\\1", Maaslin_micro_results$feature)
-  Maaslin_micro_results$species <- tax_table(phyloseq4maaslin)[Maaslin_micro_results$feature, "Species"]
-    Maaslin_micro_results$species <- paste0("<i>", Maaslin_micro_results$species, "</i>")
-    Maaslin_micro_results$species <- gsub("^<i>(U[A-Z]) ", "\\1 <i>", Maaslin_micro_results$species)
-    Maaslin_micro_results$species <- gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", Maaslin_micro_results$species)
-
-maaslin_micro_cor <- ggscatter(data=Maaslin_micro_results[abs(Maaslin_micro_results$sig)>0.6,], y="metadata", x="species", legend="right", xlab=F, ylab="")+
-  rotate_x_text(angle=20)+
-  geom_point(aes(color=sig), size=10)+
-  scale_color_steps2(limit = c(-2.5,2.5), low = "blue", high =  "red", mid = "white", midpoint = 0, name="Significance")+
-  theme(axis.text.x=element_markdown())+
-  theme(text=element_text(family="serif"))+
-  scale_y_discrete(labels=rev(c("MRS", "APDA")))+
-  theme(axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 40)))
-
-combined_maaslin_plot <- ggarrange(maaslin_chem_cor, maaslin_micro_cor, ncol=1, align="v", common.legend=T, legend="right", heights=c(3,2))+
-  theme(panel.background=element_rect(fill = "white"), plot.background=element_rect(fill = "white"), legend.background=element_rect(fill = "white"))
-
-ggsave(plot=combined_maaslin_plot, filename="Bacterial_Maaslin.tiff", width=6, height=4.5, units="in", dpi="print")
 #######################################################
 
 

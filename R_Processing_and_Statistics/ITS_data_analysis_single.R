@@ -1,6 +1,6 @@
 #title: "Kombucha-ITS_single"
 #author: "Jonathan Sogin"
-#date: "2023"
+#date: "2024"
 
 
 #Importing libraries
@@ -235,14 +235,15 @@ plottable = psmelt(plot_object)
   plottable=plottable[order(plottable$Blinded_Product),]
   plottable$Species=factor(plottable$Species, levels=c(setdiff(plottable$Species, "other"), "other"))
 
-rel_abundance_plot <- ggbarplot(plottable, x="Sample", y="Abundance", fill="Species", xlab=F, ylab=F, palette = "simpsons", width=1, legend="bottom")+
+rel_abundance_plot <- ggbarplot(plottable, x="Sample", y="Abundance", fill="Species", xlab=F, ylab="relative abundance", palette = "simpsons", width=1, legend="bottom")+
   facet_grid(~Blinded_Brand, switch="x", scales="free_x", space="free_x", labeller=as_labeller(function(x){gsub("_", " ", x)}))+
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())+
   font("legend.title")+
+  theme(axis.title.y=element_markdown(face="plain", size=15))+
   theme(text=element_text(family="serif"))+
   theme(legend.text=element_markdown())
 
-ggsave(plot=rel_abundance_plot, filename="Fungal_Relative_Abundance_single.tiff", width=8, height=3, units="in", dpi="print")
+ggsave(plot=rel_abundance_plot, filename="Fungal_Relative_Abundance_single.tiff", width=8.5, height=3, units="in", dpi="print")
 #######################################################
 
 
@@ -255,6 +256,10 @@ ggsave(plot=rel_abundance_plot, filename="Fungal_Relative_Abundance_single.tiff"
 analysis <- prune_samples(setdiff(sample_names(fungdata_decontam), c("Run2_K07_1_ITS", "Run2_K07_2_ITS", "Run2_K41_ITS")), fungdata_decontam)
   analysis <- filter_taxa(analysis, function(x) sum(x)!=0, prune=T)
   
+#Denoising data
+#Using PERFect, which is a statistical means of eliminating taxa that do not contribute to covariance
+#this will inherently affect alpha diversity measurements, but will do so with the benefit of greater confidence in preventing artifically high alpha diversity measurements due to sequencing artifacts
+
 #splitting up analysis object, as the otu table will be modified and the separate parts will need to be merged into a new object after denoising
 fungdatadecontam_otu <- otu_table(analysis)
 fungdatadecontam_tax <- tax_table(analysis)
@@ -358,7 +363,7 @@ ggsave(plot=ordination_plot, filename="Fungal_Bray_Ordination.tiff", width=8, he
 
 #Beta diversity PERMANOVA
 #######################################################
-#Conducting PERMANOVA analysis to determine effect of Product and Time_point variables on overall community structure
+#Conducting PERMANOVA analysis to determine effect of Brand and Product variables on overall community structure
 
 #Agglomerating data to Species level to reduce the dimentionality of the data
 phyloseq4permanova <- analysis_GlomSpecies_norm
@@ -381,75 +386,6 @@ dbrda.microbiological <- dbrda(dist ~ ITS_Sequencing_Run + Blinded_Brand + GYC.N
 dbrda.microbiological.aov <- anova(dbrda.microbiological, by = 'margin')
 dbrda.microbiological.aov
 
-#checking condition for equal variance around centroid
-permdisp2_Sequencing_Run <- betadisper(dist, meta$ITS_Sequencing_Run)
-permdisp2_Sequencing_Run.aov <- anova(permdisp2_Sequencing_Run)
-permdisp2_Sequencing_Run$call; permdisp2_Sequencing_Run.aov
-
-permdisp2_Brand <- betadisper(dist, meta$Blinded_Brand)
-permdisp2_Brand.aov <- anova(permdisp2_Brand)
-permdisp2_Brand$call; permdisp2_Brand.aov
-#######################################################
-
-
-#Using MaAsLin2 to look at associations between chemical and microbiological data and the observed community
-#######################################################
-#setting a filtering cutoff of mean abundance greater than 0.0005 and prevalence greater than 0.25
-phyloseq4maaslin_tmp <- analysis_GlomSpecies
-  phyloseq4maaslin_tmp_norm <- analysis_GlomSpecies_norm
-  otus_to_keep <- rownames(tax_table(filter_taxa(phyloseq4maaslin_tmp_norm, function(x) {mean(x) > 0.0005 & sum(x>0) > length(sample_sums(phyloseq4maaslin_tmp_norm))*0.25}, T)))
-phyloseq4maaslin <- prune_taxa(otus_to_keep, phyloseq4maaslin_tmp)
-sample_sums(phyloseq4maaslin)/sample_sums(phyloseq4maaslin_tmp)
-
-otu <- t(otu_table(phyloseq4maaslin))
-meta <- data.frame(sample_data(phyloseq4maaslin)[,c("ITS_Sequencing_Run", "Blinded_Brand", "pH", "Ethanol....", "Lactic..g.L.", "Acetic..g.L.", "Glucose..g.L.", "Nutrition.Sugar..g.L.", "Fructose..g.L.", "calculated_sugar", "rel_sugar_difference", "GYC.N..log10CFU.mL.", "APDA..log10CFU.mL.", "MRS.N..log10CFU.mL.")])
-
-model_chem <- Maaslin2(input_data=otu, input_metadata=meta, output="Fungi_MaaslinChemResults", fixed_effects=c("pH", "Ethanol....", "Lactic..g.L.", "Acetic..g.L.", "calculated_sugar", "rel_sugar_difference"), random_effects=c("ITS_Sequencing_Run", "Blinded_Brand"))
-
-Maaslin_chem_results <- read.delim(file="./Fungi_MaaslinChemResults/all_results.tsv")
-Maaslin_chem_results$metadata <- factor(Maaslin_chem_results$metadata, levels=rev(c("Ethanol....", "pH", "Lactic..g.L.", "Acetic..g.L.", "calculated_sugar", "rel_sugar_difference")))
-
-#'significance' is derived from the Maaslin q value, and is -log10(q)*sign(coef)
-Maaslin_chem_results$sig <- (-log10(Maaslin_chem_results$qval)*sign(Maaslin_chem_results$coef))
-  Maaslin_chem_results$feature <- gsub("X(.{32})", "\\1", Maaslin_chem_results$feature)
-  Maaslin_chem_results$species <- tax_table(phyloseq4maaslin)[Maaslin_chem_results$feature, "Species"]
-    Maaslin_chem_results$species <- paste0("<i>", Maaslin_chem_results$species, "</i>")
-    Maaslin_chem_results$species <- gsub("^<i>(U[A-Z]) ", "\\1 <i>", Maaslin_chem_results$species)
-    Maaslin_chem_results$species <- gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", Maaslin_chem_results$species)
-
-maaslin_chem_cor <- ggscatter(data=Maaslin_chem_results[abs(Maaslin_chem_results$sig)>0.6,], y="metadata", x="species", legend="right", xlab=F, ylab=F)+
-  rotate_x_text(angle=20)+
-  geom_point(aes(color=sig), size=10)+
-  scale_color_steps2(limit = c(-2.5,2.5), low = "blue", high =  "red", mid = "white", midpoint = 0, name="Significance")+
-  theme(axis.text.x=element_markdown())+
-  theme(text=element_text(family="serif"))+
-  scale_y_discrete(labels=rev(c("lactic acid")))
-    
-model_micro <- Maaslin2(input_data=otu, input_metadata=meta, output="Fungi_MaaslinMicroResults", fixed_effects=c("GYC.N..log10CFU.mL.", "APDA..log10CFU.mL.", "MRS.N..log10CFU.mL."), random_effects=c("ITS_Sequencing_Run", "Blinded_Brand"))
-
-Maaslin_micro_results <- read.delim(file="./Fungi_MaaslinMicroResults/all_results.tsv")
-Maaslin_micro_results$metadata <- factor(Maaslin_micro_results$metadata, levels=rev(c("GYC.N..log10CFU.mL.", "MRS.N..log10CFU.mL.", "APDA..log10CFU.mL.")))
-
-Maaslin_micro_results$sig <- (-log10(Maaslin_micro_results$qval)*sign(Maaslin_micro_results$coef))
-  Maaslin_micro_results$feature <- gsub("X(.{32})", "\\1", Maaslin_micro_results$feature)
-  Maaslin_micro_results$species <- tax_table(phyloseq4maaslin)[Maaslin_micro_results$feature, "Species"]
-    Maaslin_micro_results$species <- paste0("<i>", Maaslin_micro_results$species, "</i>")
-    Maaslin_micro_results$species <- gsub("^<i>(U[A-Z]) ", "\\1 <i>", Maaslin_micro_results$species)
-    Maaslin_micro_results$species <- gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", Maaslin_micro_results$species)
-
-maaslin_micro_cor <- ggscatter(data=Maaslin_micro_results[abs(Maaslin_micro_results$sig)>0.6,], y="metadata", x="species", legend="right", xlab=F, ylab="")+
-  rotate_x_text(angle=20)+
-  geom_point(aes(color=sig), size=10)+
-  scale_color_steps2(limit = c(-2.5,2.5), low = "blue", high =  "red", mid = "white", midpoint = 0, name="Significance")+
-  theme(axis.text.x=element_markdown())+
-  theme(text=element_text(family="serif"))+
-  scale_y_discrete(labels=rev(c("GYC", "MRS", "APDA")))+
-  theme(axis.title.y = element_text(margin = margin(t=0, r=0, b=0, l=60)))
-
-combined_maaslin_plot <- ggarrange(maaslin_chem_cor, maaslin_micro_cor, ncol=1, align="v", common.legend=T, legend="right", heights=c(2,3))+
-  theme(panel.background=element_rect(fill = "white"), plot.background=element_rect(fill = "white"), legend.background=element_rect(fill = "white"))
-
-ggsave(plot=combined_maaslin_plot, filename="Fungal_Maaslin.tiff", width=6, height=4.5, units="in", dpi="print")
 #######################################################
 
 

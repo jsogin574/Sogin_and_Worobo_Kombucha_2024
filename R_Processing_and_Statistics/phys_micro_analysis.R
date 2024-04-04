@@ -1,6 +1,6 @@
 #title: "Kombucha-chemical-micro"
 #author: "Jonathan Sogin"
-#date: "2023"
+#date: "2024"
 
 
 #Importing libraries
@@ -151,22 +151,13 @@ summary(metadata_graphs$APDA..log10CFU.mL.)
 explanatory_fit <- lm(Ethanol.... ~ Blinded_Brand + Blinded_Product, data=data.frame(metadata_graphs), na.action=na.omit)
 summary(explanatory_fit)
 
-physiochemical_fit <- lm(Ethanol.... ~ Blinded_Brand + pH + Lactic..g.L. + Acetic..g.L. + calculated_sugar + rel_sugar_difference, data=data.frame(metadata_graphs), na.action=na.omit)
+physiochemical_fit <- lm(Ethanol.... ~ pH + Lactic..g.L. + Acetic..g.L. + calculated_sugar + rel_sugar_difference, data=data.frame(metadata_graphs), na.action=na.omit)
 summary(physiochemical_fit)
 
-microbiological_fit <- lm(Ethanol.... ~ Blinded_Brand + GYC.N..log10CFU.mL. + MRS.N..log10CFU.mL. + APDA..log10CFU.mL., data=data.frame(metadata_graphs), na.action=na.omit)
+microbiological_fit <- lm(Ethanol.... ~ GYC.N..log10CFU.mL. + MRS.N..log10CFU.mL. + APDA..log10CFU.mL., data=data.frame(metadata_graphs), na.action=na.omit)
 summary(microbiological_fit)
-#######################################################
 
-#plotting pH vs ethanol content
-#######################################################
-pH_cor_plot <- ggscatter(data=metadata_graphs, x="pH", y="Ethanol....", add="reg.line", legend="right", cor.coef=T, ylab="% Ethanol (v/v)", xlab="pH", cor.coeff.args=list(method="kendall", aes(label=paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), label.x=2.9, family="serif"))+
-  geom_point(aes(color=Blinded_Brand), size=5)+
-  scale_color_manual(name="Brand", values=get_palette("simpsons", 6))+
-  theme(text=element_text(family="serif"))
-
-ggsave(plot=pH_cor_plot, filename="pH_Eth_Cor_Plot.tiff", width=6, height=4, units="in", dpi="print")
-#######################################################
+```
 
 #physiochemical ordination
 #######################################################

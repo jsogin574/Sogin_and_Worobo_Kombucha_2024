@@ -1,6 +1,6 @@
 #title: "Kombucha-Bac_Fung_Correlation"
 #author: "Jonathan Sogin"
-#date: "2023"
+#date: "2024"
 
 
 #Importing libraries
@@ -160,9 +160,6 @@ old_colnames <- colnames(network_data)
 network_data <- cbind(network_data, taxadata[network_data$name,], taxadata[network_data$connecting_node,])
 colnames(network_data) <- c(old_colnames, "Kingdom1", "Phylum1", "Class1", "Order1", "Family1", "Genus1", "Species1", "Kingdom2", "Phylum2", "Class2", "Order2", "Family2", "Genus2", "Species2")
 
-#network_data[network_data$name=="1c1a26e5d7f36982859266c1e5375b91","Family1"] <- "UR Saccharomycetales 1d8e"
-#network_data[network_data$connecting_node=="1c1a26e5d7f36982859266c1e5375b91","Family2"] <- "UR Saccharomycetales 1d8e"
-
 #adding useful information to the output file
 network_data$relationship <- NA
 try(network_data[network_data$Kingdom1=="Bacteria" & network_data$Kingdom2=="Bacteria",]$relationship <- "Bacteria-Bacteria")
@@ -176,6 +173,10 @@ write.csv(network_data[!is.na(network_data$weight),!is.element(colnames(network_
 network_data$Family1 = paste0("<i>", network_data$Family1, "</i>")
 network_data$Family1 = gsub("^<i>(U[A-Z]) ", "\\1 <i>", network_data$Family1)
 network_data$Family1 = gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", network_data$Family1)
+
+network_data$Genus1 = paste0("<i>", network_data$Genus1, "</i>")
+network_data$Genus1 = gsub("^<i>(U[A-Z]) ", "\\1 <i>", network_data$Genus1)
+network_data$Genus1 = gsub(" ([a-z0-9]{4})</i>$", "</i> \\1", network_data$Genus1)
 
 network_data$Species1 = paste0("<i>", network_data$Species1, "</i>")
 network_data$Species1 = gsub("^<i>(U[A-Z]) ", "\\1 <i>", network_data$Species1)
@@ -200,7 +201,7 @@ network_plot <- ggplot(network_data, aes(x=x, y=y, xend=xend, yend=yend))+
   geom_edges(aes(size=abs(correspondence_val), alpha=stability), color="purple", data=negative_weight, linetype="dashed")+
   geom_nodes(aes(color=Genus1, size=degree, shape=Kingdom1))+
   scale_shape(name="Kingdom")+
-  scale_color_manual(name="Genus", values=get_palette("futurama", length(unique(network_data$Genus1))))+
+  scale_color_manual(name="Genus", values=c(get_palette("startrek", length(unique(network_data[network_data$Kingdom1=="Bacteria","Genus1"]))), get_palette("rickandmorty", length(unique(network_data[network_data$Kingdom1=="Fungi","Genus1"])))))+
   guides(color=guide_legend(override.aes=list(size=5)), shape=guide_legend(override.aes=list(size=5)), alpha="none")+
   scale_size(guide="none")+
   theme_blank()+

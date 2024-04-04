@@ -1,6 +1,6 @@
 #title: "Kombucha-ITS_paired"
 #author: "Jonathan Sogin"
-#date: "2023"
+#date: "2024"
 
 #Importing libraries
 #######################################################
@@ -192,7 +192,7 @@ write.csv(sum_table, "Fungdata_filtering_counts_paired.csv", quote=F)
 
 samples_plotting <- fungdata_decontam
 
-#aglommerating data to Species level for plotting
+#agglomerating data to Species level for plotting
 samples_plottingGlomSpecies <- glom_tax(samples_plotting, "Species")
 samples_plottingGlomSpeciesNorm <- transform_sample_counts(samples_plottingGlomSpecies, function(x) x / sum(x))
 
