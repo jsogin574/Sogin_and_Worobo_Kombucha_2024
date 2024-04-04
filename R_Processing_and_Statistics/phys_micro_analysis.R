@@ -14,8 +14,6 @@ library("ggnewscale"); packageVersion("ggnewscale")
 
 #data analysis packages
 library("multcomp"); packageVersion("multcomp")
-library("margins"); packageVersion("margins")
-library("ecodist"); packageVersion("ecodist")
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})
@@ -156,31 +154,4 @@ summary(physiochemical_fit)
 
 microbiological_fit <- lm(Ethanol.... ~ GYC.N..log10CFU.mL. + MRS.N..log10CFU.mL. + APDA..log10CFU.mL., data=data.frame(metadata_graphs), na.action=na.omit)
 summary(microbiological_fit)
-
-```
-
-#physiochemical ordination
 #######################################################
-
-phys_ord <- metadata_graphs
-
-sample_data <- data.frame(metadata_graphs[,c("pH", "Ethanol....", "Lactic..g.L.", "Acetic..g.L.", "calculated_sugar", "rel_sugar_difference")])
-mahal_sq <- distance(sample_data, method="mahal")
-mahal <- sqrt(mahal_sq)
-nmds.out <- nmds(mahal)
-scores <- nmds.min(nmds.out)
-chem_ordination <- cbind(metadata_graphs, scores)
-
-chem_ordination_plot <- ggscatter(data=chem_ordination, x="X1", y="X2", xlab="NMDS1", ylab="NMDS2", color="Blinded_Brand", legend.title="Brand", palette="simpsons", legend="right", point=F, ellipse=T, ellipse.alpha=0.25, ellipse.type="convex")+
-  new_scale_color()+
-  geom_point(aes(color=Ethanol...., size=4))+
-  scale_color_steps2("% Ethanol (v/v)", low="darkgreen", midpoint=0.5, high="darkred")+
-  guides(size="none")+
-  theme(axis.text.x=element_blank(), axis.text.y=element_blank())+
-  theme(legend.title=element_text(face="bold"))+
-  theme(text=element_text(family="serif"))
-
-ggsave(plot=chem_ordination_plot, filename="Chemical_Ordination.tiff", width=8, height=4, units="in", dpi="print")
-#######################################################
-
-
