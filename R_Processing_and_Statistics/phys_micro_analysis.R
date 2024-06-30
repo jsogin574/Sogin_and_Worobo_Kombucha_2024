@@ -37,6 +37,26 @@ metadata_graphs$Blinded_Brand <- gsub("Brand_", "", metadata_graphs$Blinded_Bran
 metadata_graphs$Blinded_Brand=factor(metadata_graphs$Blinded_Brand, levels=seq(1,6))
 metadata_graphs$Blinded_Product=factor(metadata_graphs$Blinded_Product, levels=c("Product_1", "Product_2", "Product_3", "Product_4", "Product_5", "Product_6", "Product_7", "Product_8", "Product_9", "Product_10", "Product_11", "Product_12", "Product_13", "Product_14", "Product_15", "Product_16", "Product_17", "Product_18", "Product_19", "Product_20", "Product_21", "Product_22", "Product_23", "Product_24"))
 
+
+#calculating mean and 95% confidence interval within each brand for pH, Ethanol, Lactic Acid, Acetic Acid, and Total Sugar
+#also, quick table of number of samples per brand
+other_stats <- c()
+for(b in seq(1:6)){
+    data <- subset(metadata_graphs, Blinded_Brand==b)
+    temp <- matrix(NA, 3,5)
+    colnames(temp) <- colnames(data[c(15:18,24)])
+    rownames(temp) <- c("estimate", "lower_CI", "upper_CI")
+    for(c in colnames(temp)){
+      test <- t.test(data[,c])
+      temp[1,c] <- c(test$estimate)
+      temp[2,c] <- c(test$conf.int[1])
+      temp[3,c] <- c(test$conf.int[2])
+      }
+    other_stats[[b]] <- temp
+  }
+
+table(metadata_graphs["Blinded_Brand"])
+
 #plotting relevant sample chemistry
 #plotting ethanol composition of samples, including those that were excluded for metagenomic analysis
 #conducting t-test on each sample to determine whether the mean is greater than 0.5% abv
