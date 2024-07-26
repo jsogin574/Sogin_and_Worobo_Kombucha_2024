@@ -1,18 +1,20 @@
 #title: "Kombucha-ITS_paired"
 #author: "Jonathan Sogin"
 #date: "2024"
+#R version 4.2.3
+#renv version 0.16.0
+
 
 #Importing libraries
 #######################################################
 #pre-processing and data handling packages
-library("phyloseq"); packageVersion("phyloseq")
-library("PERFect"); packageVersion("PERFect")
-library("decontam"); packageVersion("decontam")
+library("phyloseq"); packageVersion("phyloseq") # 1.41.1
+library("decontam"); packageVersion("decontam") #version 1.18.0
 
 #visualization packages
 
-library("ggpubr"); packageVersion("ggpubr")
-library("ggtext"); packageVersion("ggtext")
+library("ggpubr"); packageVersion("ggpubr") #version 0.5.0
+library("ggtext"); packageVersion("ggtext") #version 0.1.2
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})

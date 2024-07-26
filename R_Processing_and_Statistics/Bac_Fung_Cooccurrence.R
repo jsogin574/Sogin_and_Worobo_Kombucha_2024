@@ -1,23 +1,23 @@
 #title: "Kombucha-Bac_Fung_Correlation"
 #author: "Jonathan Sogin"
 #date: "2024"
+#R version 4.2.3
+#renv version 0.16.0
 
 
 #Importing libraries
 #######################################################
 #pre-processing and data handling packages
-library("phyloseq"); packageVersion("phyloseq")
-library("phylosmith"); packageVersion("phylosmith")
+library("phyloseq"); packageVersion("phyloseq") # 1.41.1
 
 #visualization packages
-
-library("ggpubr"); packageVersion("ggpubr")
-library("ggtext"); packageVersion("ggtext")
-library("igraph"); packageVersion("igraph")
-library("ggnetwork"); packageVersion("ggnetwork")
+library("ggpubr"); packageVersion("ggpubr") #version 0.5.0
+library("ggtext"); packageVersion("ggtext") #version 0.1.2
+library("igraph"); packageVersion("igraph") #version 1.6.0
+library("ggnetwork"); packageVersion("ggnetwork") #version 0.5.13
 
 #data analysis packages
-library("SpiecEasi"); packageVersion("SpiecEasi")
+library("SpiecEasi"); packageVersion("SpiecEasi") #version 1.1.3
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})
@@ -59,6 +59,19 @@ glom_tax <- function(physeq, rank){
   }
   tax_glom(tmp_physeq, taxrank=rank, NArm=FALSE)
 }
+
+#function from phylosmith package
+set_sample_order <- function(physeq, treatment=NULL){
+  metadata <- as(physeq@sam_data, "data.frame")
+  metadata <- data.table::data.table(samples = rownames(metadata), metadata)
+  if (is.null(treatment)) treatment <- "samples"
+  data.table::setkeyv(metadata, treatment)
+  phyloseq::otu_table(physeq) <-
+    physeq@otu_table[, metadata$samples]
+  phyloseq::sample_data(physeq) <- data.frame(metadata, row.names = 1)
+  return(physeq)
+}
+
 #######################################################
 
 
@@ -93,8 +106,8 @@ sample_names(bac) <- as.vector(unlist(sample_data(bac)[,"Sample_ID"]))
 sample_names(fung) <- as.vector(unlist(sample_data(fung)[,"Sample_ID"]))
 
 #order matters for this, so reordering according to Sample_ID
-bac <- set_sample_order(bac, sort_on="Sample_ID")
-fung <- set_sample_order(fung, sort_on="Sample_ID")
+bac <- set_sample_order(bac, treatment="Sample_ID")
+fung <- set_sample_order(fung, treatment="Sample_ID")
 
 #sanity check on the order
 table(sample_names(bac)==sample_names(fung))
@@ -112,6 +125,8 @@ taxadata["dab25ac5ca12ad5ad505258e4c8fc7de",c("Genus", "Species")] <- "UR Pichia
 taxadata["3621e3dbf9c25eaa08b32a94946ff3be",c("Genus", "Species")] <- "UR Pichiaceae 3f09"
 taxadata$Genus <- gsub("(UR [A-za-z]*)( .{4})", "\\1", taxadata$Genus)
 
+
+#spieceasi.net <- readRDS("spieceasi.RDS")
 
 spieceasi.net <- spiec.easi(list(bac, fung), method='mb',lambda.min.ratio=1e-2, nlambda=250, icov.select.params=list(rep.num=1000))
 getStability(spieceasi.net)
@@ -196,16 +211,28 @@ network_data <- network_data[order(network_data$Species1),]
 positive_weight <- function(x) {x[x$correspondence_val>0,]}
 negative_weight <- function(x) {x[x$correspondence_val<0,]}
 
+bacterial_nodes <- subset(network_data, network_data$Kingdom1=="Bacteria")
+  bacterial_nodes$node_labels <- gsub("<i>([A-Za-z]{1}).*</i>", "<i>\\1</i>", bacterial_nodes$Genus1)
+  bacterial_nodes$node_labels <- gsub("UR ", "", bacterial_nodes$node_labels)
+fungal_nodes <- subset(network_data, network_data$Kingdom1=="Fungi")
+  fungal_nodes$node_labels <- gsub("<i>([A-Za-z]{1}).*</i>", "<i>\\1</i>", fungal_nodes$Genus1)
+  fungal_nodes$node_labels <- gsub("UR ", "", fungal_nodes$node_labels)
+  
 network_plot <- ggplot(network_data, aes(x=x, y=y, xend=xend, yend=yend))+
   geom_edges(aes(size=abs(correspondence_val), alpha=stability), color="black", data=positive_weight)+
   geom_edges(aes(size=abs(correspondence_val), alpha=stability), color="purple", data=negative_weight, linetype="dashed")+
-  geom_nodes(aes(color=Genus1, size=degree, shape=Kingdom1))+
+  geom_nodes(color="black", aes(size=degree*3+4), data=bacterial_nodes, shape="circle")+
+  geom_nodes(aes(color=Genus1, size=degree*3), data=bacterial_nodes, shape="circle")+
+  geom_richtext(aes(label=node_labels), size=2.5, fill=NA, label.color=NA, data=bacterial_nodes, fontface="bold", family="serif")+
+  geom_nodes(color="black", aes(size=degree*3+4), data=fungal_nodes, shape="square")+
+  geom_nodes(aes(color=Genus1, size=degree*3), data=fungal_nodes, shape="square")+
+  geom_richtext(aes(label=node_labels), size=2.5, fill=NA, label.color=NA, data=fungal_nodes, fontface="bold", family="serif")+
   scale_shape(name="Kingdom")+
   scale_color_manual(name="Genus", values=c(get_palette("startrek", length(unique(network_data[network_data$Kingdom1=="Bacteria","Genus1"]))), get_palette("rickandmorty", length(unique(network_data[network_data$Kingdom1=="Fungi","Genus1"])))))+
-  guides(color=guide_legend(override.aes=list(size=5)), shape=guide_legend(override.aes=list(size=5)), alpha="none")+
+  guides(color=guide_legend(override.aes=list(size=3.5)), alpha="none")+
   scale_size(guide="none")+
   theme_blank()+
-  theme(legend.position="right", legend.text=element_markdown(family="serif", size=15), legend.title=element_text(family="serif", size=15))+
+  theme(legend.position="right", legend.text=element_markdown(family="serif", size=11), legend.title=element_text(family="serif", size=13))+
   theme(panel.background=element_rect(fill = "#f9f9f9"), plot.background=element_rect(fill = "#f9f9f9"), legend.background=element_rect(fill = "#f9f9f9"))
 
 ggsave(plot=network_plot, filename="Network_plot.tiff", width=10, height=6, units="in", dpi="print")

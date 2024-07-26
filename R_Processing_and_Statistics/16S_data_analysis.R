@@ -1,27 +1,26 @@
 #title: "Kombucha-16S"
 #author: "Jonathan Sogin"
 #date: "2024"
+#R version 4.2.3
+#renv version 0.16.0
 
 
 #Importing libraries
 #######################################################
 #pre-processing and data handling packages
-library("phyloseq"); packageVersion("phyloseq")
-library("PERFect"); packageVersion("PERFect")
-library("decontam"); packageVersion("decontam")
+library("phyloseq"); packageVersion("phyloseq") # 1.41.1
+library("PERFect"); packageVersion("PERFect") #version 1.12.0
+library("decontam"); packageVersion("decontam") #version 1.18.0
 
 #visualization packages
-
-library("ggpubr"); packageVersion("ggpubr")
-library("ggtext"); packageVersion("ggtext")
-library("ggnewscale"); packageVersion("ggnewscale")
+library("ggpubr"); packageVersion("ggpubr") #version 0.5.0
+library("ggtext"); packageVersion("ggtext") #version 0.1.2
+library("ggnewscale"); packageVersion("ggnewscale") #version 0.4.8
 
 #data analysis packages
-library("microbiome"); packageVersion("microbiome")
-library("vegan"); packageVersion("vegan")
-library("GUniFrac"); packageVersion("GUniFrac")
-library("Maaslin2"); packageVersion("Maaslin2")
-library("SpiecEasi"); packageVersion("SpiecEasi")
+library("microbiome"); packageVersion("microbiome") #version 1.20.0
+library("vegan"); packageVersion("vegan") #version 2.6-6.1
+library("GUniFrac"); packageVersion("GUniFrac") #version 1.8
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})
@@ -344,8 +343,8 @@ bacdatadecontam_tax <- tax_table(analysis)
 bacdatadecontam_sample <- sample_data(analysis)
 bacdatadecontam_seqs <- refseq(analysis)
 
-#running PERFseq
-#transposing data to use in PERFseq
+#running PERFect
+#transposing data to use in PERFect
 Counts <- t(bacdatadecontam_otu)
 dim(Counts)
 
@@ -438,7 +437,7 @@ ordination_plot <- ggscatter(data=ordination_plot_samples, x="NMDS1", y="NMDS2",
   theme(axis.text.x=element_blank(), axis.text.y=element_blank())+
   theme(legend.title=element_text(face="bold"))+
   theme(text=element_text(family="serif"))+
-  new_scale_color()+
+  #new_scale_color()+
   geom_point(data=ordination_plot_taxa, shape="square")+
   geom_richtext(data=ordination_plot_taxa, label=ordination_plot_taxa$Species, label.size=NA, alpha=0.8, fill=NA, nudge_x=c(rep(0.225,10), 0, 0.225, 0.225), nudge_y=c(rep(0.052,10), 0.1, 0.052, 0.052), family="serif", size=3)
   
@@ -493,7 +492,7 @@ top_coef_Lactic <- top_coef_Lactic[order(top_coef_Lactic$coefficient),]
 plot_coef_Lactic <- ggbarplot(data=top_coef_Lactic, x="species_name", y="coefficient", fill="coefficient", orientation="horiz", legend="none")+
   scale_fill_gradient(low="#FEDD61", high="#9BB8EA", limits=c(-0.15, 0.15))+
   theme(axis.text.y=element_markdown())+
-  scale_y_continuous(breaks=seq(-0.15, 0.15, 0.05), limits=c(-0.15, 0.15), labels=c("-0.15", "-0.10", "-0.05", "0.00", "0.05", "0.10", "0.15"))+
+  scale_y_continuous(breaks=seq(-0.15, 0.15, 0.05), limits=c(-0.15, 0.15), labels=c(paste("\U2212", "0.15", sep=""), paste("\U2212", "0.10", sep=""), paste("\U2212", "0.05", sep=""), "0.00", "0.05", "0.10", "0.15"))+
   theme(axis.title.x=element_blank())+
   theme(axis.title.y=element_blank())+
   theme(text=element_text(family="serif"))
@@ -511,7 +510,17 @@ phyloseq4physchem_glomOrderNorm <- transform_sample_counts(phyloseq4physchem_glo
 phys_chem_plots <- psmelt(phyloseq4physchem_glomOrderNorm)
 phys_chem_plots$Blinded_Brand <- gsub("Brand_", "", phys_chem_plots$Blinded_Brand)
 
-lactic_cor_plot <- ggscatter(data=subset(phys_chem_plots, Order=="Lactobacillales"), x="Abundance", y="Lactic..g.L.", add="reg.line", legend="right", cor.coef=T, ylab="lactic acid g/L", xlab="<i>Lactobacillales</i> relative abundance", cor.coeff.args=list(method="kendall", aes(label=paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), label.y=2.25, label.x=0.1, family="serif"))+
+#calculating correlation coefficients
+cor_data <- subset(phys_chem_plots, Order=="Lactobacillales")
+#p-value for kendall correlation test = 5.689E-9
+kendall_cor <- cor.test(x=cor_data$Abundance, y=cor_data$Lactic..g.L., method="kendall", exact=F)
+  kendall_cor
+#r2 value for linear regression = 0.4842
+reg_cor <- summary(lm(Lactic..g.L. ~ Abundance, data=cor_data))
+  reg_cor
+
+lactic_cor_plot <- ggscatter(data=subset(phys_chem_plots, Order=="Lactobacillales"), x="Abundance", y="Lactic..g.L.", add="reg.line", legend="right", ylab="lactic acid g/L", xlab="<i>Lactobacillales</i> relative abundance")+
+  geom_richtext(label=paste("<i>R<sup>2</sup></i> = 0.48, <i>p</i> = 5.7 \U00D7 10<sup>\U2212","9</sup>", sep=""), x=0.25, y=2.25, family="serif", label.color="white")+
   geom_point(aes(color=Blinded_Brand), size=5)+
   scale_color_manual(name="Brand", values=get_palette("simpsons", 6))+
   theme(text=element_text(family="serif"))+

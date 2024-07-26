@@ -1,6 +1,8 @@
 #title: "Kombucha-chemical-micro"
 #author: "Jonathan Sogin"
 #date: "2024"
+#R version 4.2.3
+#renv version 0.16.0
 
 
 #Importing libraries
@@ -8,12 +10,11 @@
 
 #visualization packages
 
-library("ggpubr"); packageVersion("ggpubr")
-library("ggtext"); packageVersion("ggtext")
-library("ggnewscale"); packageVersion("ggnewscale")
+library("ggpubr"); packageVersion("ggpubr") #version 0.5.0
+library("ggtext"); packageVersion("ggtext") #version 0.1.2
 
 #data analysis packages
-library("multcomp"); packageVersion("multcomp")
+library("multcomp"); packageVersion("multcomp") #version 1.4.26
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})
@@ -66,15 +67,17 @@ for(b in seq(1:6)){
   data <- subset(metadata_graphs, Blinded_Brand==b)
   abv_stats[[b]] <- t.test(data$Ethanol...., alternative="greater", mu=0.5, na.action=na.omit)
 }
+abv_stats
+
 #plotting ethanol composition
 abv_plot <- ggboxplot(metadata_graphs, x="Blinded_Brand", y="Ethanol....", add="jitter", ylab = "% Ethanol (v/v)", xlab="Brand", color="Blinded_Brand", palette="simpsons", legend="none", title="A")+
-  geom_hline(yintercept=0.5, col="red", size=0.75, linetype="dashed")+
+  geom_hline(yintercept=0.5, col="red", linewidth=0.75, linetype="dashed")+
   scale_y_continuous(limits=c(0,1.4))+
   scale_x_discrete(labels=seq(1,6))+
   theme(plot.title=element_text(face="bold", size=15))+
   theme(text=element_text(family="serif"))+
-  geom_text(label="***", y=1.375, x=3, fontface="bold", size=8, family="serif")+
-  geom_text(label="**", y=1.375, x=4, fontface="bold", size=8, family="serif")
+  geom_text(label="***", y=1.375, x=3, fontface="bold", size=6, family="serif")+
+  geom_text(label="**", y=1.375, x=4, fontface="bold", size=6, family="serif")
 
 #conducting t-test on each sample to determine whether the mean is different from zero
 #no p value correction was done
@@ -83,16 +86,18 @@ for(b in seq(1:6)){
   data <- subset(metadata_graphs, Blinded_Brand==b)
   sugar_stats[[b]] <- t.test(data$rel_sugar_difference, alternative="two.sided", mu=0, na.action=na.omit)
 }
+sugar_stats
+
 #plotting sugar difference
 sugar_plot <- ggboxplot(metadata_graphs, x="Blinded_Brand", y="rel_sugar_difference", add="jitter", ylab = "Rel Sugar Diff vs Label", xlab="Brand", color="Blinded_Brand", palette="simpsons", legend="none", title="B")+
   geom_hline(yintercept=0, col="black", lwd=0.25, linetype="solid")+
-  scale_y_continuous(limits=c(-0.6,0.95), breaks=c(-0.5,0,0.5), expand=c(0,0))+
+  scale_y_continuous(limits=c(-0.6,0.95), breaks=c(-0.5,0,0.5), expand=c(0,0), labels=c(paste("\U2212", "0.5", sep=""), "0", "0.5"))+
   scale_x_discrete(labels=seq(1,6))+
   theme(plot.title=element_text(face="bold", size=15))+
   theme(text=element_text(family="serif"))+
-  geom_text(label="**", y=0.85, x=2, fontface="bold", size=8, family="serif")+
-  geom_text(label="*", y=0.85, x=3, fontface="bold", size=8, family="serif")+
-  geom_text(label="*", y=0.85, x=5, fontface="bold", size=8, family="serif")
+  geom_text(label="**", y=0.85, x=2, fontface="bold", size=6, family="serif")+
+  geom_text(label="*", y=0.85, x=3, fontface="bold", size=6, family="serif")+
+  geom_text(label="*", y=0.85, x=5, fontface="bold", size=6, family="serif")
 
 sugar_eth_cor_plot <- ggscatter(data=metadata_graphs, x="rel_sugar_difference", y="Ethanol....", add="reg.line", legend="right", cor.coef=T, ylab="% Ethanol (v/v)", xlab="Rel Sugar Diff vs Label", cor.coeff.args=list(method="kendall", aes(label=paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.y=1.25, label.x=-0.3, family="serif"))+
   geom_point(aes(color=Blinded_Brand), size=5)+

@@ -1,27 +1,26 @@
 #title: "Kombucha-ITS_single"
 #author: "Jonathan Sogin"
 #date: "2024"
+#R version 4.2.3
+#renv version 0.16.0
 
 
 #Importing libraries
 #######################################################
 #pre-processing and data handling packages
-library("phyloseq"); packageVersion("phyloseq")
-library("PERFect"); packageVersion("PERFect")
-library("decontam"); packageVersion("decontam")
+library("phyloseq"); packageVersion("phyloseq") # 1.41.1
+library("PERFect"); packageVersion("PERFect") #version 1.12.0
+library("decontam"); packageVersion("decontam") #version 1.18.0
 
 #visualization packages
-
-library("ggpubr"); packageVersion("ggpubr")
-library("ggtext"); packageVersion("ggtext")
-library("ggnewscale"); packageVersion("ggnewscale")
+library("ggpubr"); packageVersion("ggpubr") #version 0.5.0
+library("ggtext"); packageVersion("ggtext") #version 0.1.2
+library("ggnewscale"); packageVersion("ggnewscale") #version 0.4.8
 
 #data analysis packages
-library("microbiome"); packageVersion("microbiome")
-library("vegan"); packageVersion("vegan")
-library("GUniFrac"); packageVersion("GUniFrac")
-library("Maaslin2"); packageVersion("Maaslin2")
-library("SpiecEasi"); packageVersion("SpiecEasi")
+library("microbiome"); packageVersion("microbiome") #version 1.20.0
+library("vegan"); packageVersion("vegan") #version 2.6-6.1
+library("GUniFrac"); packageVersion("GUniFrac") #version 1.8
 
 #setting seed
 addTaskCallback(function(...) {set.seed(02221997);TRUE})
@@ -266,8 +265,8 @@ fungdatadecontam_tax <- tax_table(analysis)
 fungdatadecontam_sample <- sample_data(analysis)
 fungdatadecontam_seqs <- refseq(analysis)
 
-#running PERFseq
-#transposing data to use in PERFseq
+#running PERFect
+#transposing data to use in PERFect
 Counts <- t(fungdatadecontam_otu)
 dim(Counts)
 
@@ -353,7 +352,6 @@ ordination_plot <- ggscatter(data=ordination_plot_samples, x="NMDS1", y="NMDS2",
   theme(axis.text.x=element_blank(), axis.text.y=element_blank())+
   theme(legend.title=element_text(face="bold"))+
   theme(text=element_text(family="serif"))+
-  new_scale_color()+
   geom_point(data=ordination_plot_taxa, shape="square")+
   geom_richtext(data=ordination_plot_taxa, label=ordination_plot_taxa$Species, label.size=NA, alpha=0.8, fill=NA, nudge_x=c(0.205, 0.235, rep(0.225,5)), nudge_y=c(0.09, 0.18, rep(0.09, 5)), family="serif", size=3)
   
